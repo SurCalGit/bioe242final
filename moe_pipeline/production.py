@@ -165,9 +165,7 @@ def moe_production_pipeline(train_df, test_df, path, HP=None, n_low=10_000, verb
     X_full, y_full, smi_full = _build_xy(train_df)
     _log(f"  Full train : {len(y_full):,} rows | {train_df['scaffold'].nunique()} unique scaffolds")
 
-    X_test_raw = X_test.copy()
-    np.nan_to_num(X_test_raw, nan=0.0, posinf=0.0, neginf=0.0, copy=False)
-    smi_test = test_df["smiles"].tolist()
+    X_test_raw, y_test_arr, smi_test = _build_xy(test_df)
 
     # STEP 2: Run pipelines 
 
@@ -176,8 +174,7 @@ def moe_production_pipeline(train_df, test_df, path, HP=None, n_low=10_000, verb
 
     # STEP 3: Evaluate on test set 
 
-    _log("\n[Step 1] Evaluating both final MoEs on the held-out test set...")
-    np.nan_to_num(X_test_raw, nan=0.0, posinf=0.0, neginf=0.0, copy=False)
+    _log("\n[Step 3] Evaluating both final MoEs on the held-out test set...")
 
     metrics_low,  _, W_low  = _evaluate_on_test(
         results_low["final_moe"],  results_low["best_config"],  X_test_raw, y_test_arr, smi_test
