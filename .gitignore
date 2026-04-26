@@ -13,6 +13,9 @@ moe_pipeline.ipynb
 # Claude instructions
 CLAUDE.md
 
+# Data files
+*.csv
+
 # Python cache
 __pycache__/
 *.pyc
