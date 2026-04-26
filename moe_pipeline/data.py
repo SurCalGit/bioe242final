@@ -117,7 +117,7 @@ def split_dataset(
         sizes = df.groupby("scaffold").size()
         chosen, count = set(), 0
         for s in unique[:-1]:
-            if count / len(df) < train_frac and s is not np.NaN:
+            if count / len(df) < train_frac and s is not np.nan:
                 chosen.add(s)
                 count += sizes[s]
         mask = df["scaffold"].isin(chosen).values
