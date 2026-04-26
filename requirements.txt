@@ -1,0 +1,32 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+
+# Machine learning — tabular experts
+scikit-learn
+xgboost
+lightgbm
+
+# Deep learning
+torch
+lightning
+
+# Graph neural networks
+torch-geometric
+
+# Chemprop D-MPNN (v2)
+chemprop
+
+# Chemistry / featurization
+rdkit
+git+https://github.com/bp-kelley/descriptastorus
+
+# Persistence
+joblib
+
+# Plotting
+matplotlib
+
+# moe_pipeline package (install in editable mode from project root)
+-e .

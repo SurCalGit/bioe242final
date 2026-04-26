@@ -1,0 +1,18 @@
+# Example package
+moe_pipeline_example/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+moe_pipeline.ipynb
+**/.ipynb_checkpoints/
+
+# Claude instructions
+CLAUDE.md
+
+# Python cache
+__pycache__/
+*.pyc
