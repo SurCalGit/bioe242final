@@ -230,11 +230,10 @@ with tempfile.TemporaryDirectory() as tmpdir:
 # 6. Pipeline: gate-only grid search (run)
 # ---------------------------------------------------------------------------
 
-section("6 — Pipeline.run (gate-only, 1-config grid, 2 folds)")
+section("6 — Pipeline.run (gate-only, 1-config grid, scaffold split)")
 
 pipeline_gate = Pipeline(
     seed=42,
-    n_folds=2,
     gate_epochs=5,
     l2_regs=[0.0],
     loss_configs=[{"entropy_reg": 0.0, "load_balancing": False}],
@@ -254,11 +253,10 @@ if gate_results:
 # 7. Pipeline: expert + gate grid search
 # ---------------------------------------------------------------------------
 
-section("7 — Pipeline.run_expert_gate_grid_search (1 expert config, 1 gate config, 2 folds)")
+section("7 — Pipeline.run_expert_gate_grid_search (1 expert config, 1 gate config, scaffold split)")
 
 pipeline_full = Pipeline(
     seed=42,
-    n_folds=2,
     gate_epochs=5,
     l2_regs=[0.0],
     loss_configs=[{"entropy_reg": 0.0, "load_balancing": False}],
