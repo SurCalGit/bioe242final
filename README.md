@@ -1,17 +1,14 @@
-# moe_pipeline
-
-A Python package implementing a **Mixture-of-Experts (MoE)** pipeline for kinase drug activity prediction (pIC50 regression).  
-Built for **BioE 242** to investigate whether MoE benefits more in low-data or high-data regimes.
+# Drug Activity Prediction Against Kinase Targets using a Mixture-of-Experts
 
 ---
 
-## Research Question
-
-> Does an MoE ensemble of heterogeneous expert models (XGBoost, Random Forest, LightGBM, D-MPNN, GIN) improve pIC50 regression accuracy compared to individual models, and does this advantage grow or shrink with training set size?
-
+## Research Questions
+- Does prediction of drug activity against kinase targets from SMILES strings using a Mixture-of-Experts architecture provide greater benefit in a **low-data regime** or a **high-data regime**?
+- Does a Mixture-of-Experts approach leverage **additional data** better than individual models and ensemble models?
 ---
 
-## Package Structure
+## File Structure
+The project is organized as a **python pacakge** as follows.
 
 ```
 moe_pipeline/
@@ -34,7 +31,7 @@ moe_pipeline/
 |------|----------|
 | `constants.py` | All numeric constants and the full default hyperparameter grid (`HP` dict) |
 | `data.py` | RDKit+Morgan featurization, Murcko scaffold computation, scaffold/random splitting, CSV loading |
-| `experts.py` | `ChempropDMPNN` (Chemprop v2 D-MPNN) and `GIN` (PyG graph network) with MC-Dropout uncertainty |
+| `experts.py` | `ChempropDMPNN` (Chemprop v2 D-MPNN) and `GIN` (PyG graph network) |
 | `gate.py` | `GatingNetwork` MLP trained with MSE + oracle supervision + optional entropy/load-balancing reg |
 | `moe.py` | `MoE` — wraps 5 experts + gate; provides `train_experts`, `expert_predictions`, `evaluate`, `save`, `load` |
 | `pipeline.py` | `Pipeline` — outer K-fold CV with inner OOF expert training; `run()` and `run_expert_gate_grid_search()` |
@@ -43,23 +40,23 @@ moe_pipeline/
 
 ---
 
-## Installation
+## Setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
 Key dependencies: `rdkit`, `descriptastorus`, `torch`, `torch_geometric`, `chemprop`, `pytorch_lightning`, `xgboost`, `lightgbm`, `scikit-learn`, `joblib`, `matplotlib`, `pandas`, `numpy`.
-
+The `moe_pipeline` is also installed as a package.  
 ---
 
 ## Quick Start
 
-The package expects a **pre-processed CSV** (`chembl_kinase_processed.csv`) produced by `data.process_dataset()`. This file ships with the repository.
+The package expects a **pre-processed CSV** (`chembl_kinase_processed.csv`) produced by `data.process_dataset()`. 
 
 ---
 
-## CLI Commands
+## Training and Pipeline
 
 ### `production` — Full production run (primary use case)
 
@@ -78,23 +75,23 @@ python -m moe_pipeline production \
 
 **All arguments:**
 
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `--input / -i` | *(required)* | Path to processed CSV |
+| Argument | Default                       | Description |
+|----------|-------------------------------|-------------|
+| `--input / -i` | *(required)*                  | Path to processed CSV |
 | `--output-dir / -o` | `runs/production_<timestamp>` | Output directory |
-| `--train-frac` | `0.85` | Fraction of scaffolds assigned to train |
-| `--split` | `scaffold` | Split strategy (`scaffold` or `random`) |
-| `--seed` | *(from HP)* | Random seed (overrides `HP["seed"]`) |
-| `--n-folds` | *(from HP)* | Outer CV folds (overrides `HP["n_folds"]`) |
-| `--n-low` | `10000` | Low-data subsample size |
-| `--hp-file` | — | JSON file with HP overrides |
-| `--quiet` | — | Suppress progress output |
+| `--train-frac` | `0.85`                        | Fraction of scaffolds assigned to train |
+| `--split` | `scaffold`                    | Split strategy (`scaffold` or `random`) |
+| `--seed` | *(see hyperparams)*           | Random seed (overrides `HP["seed"]`) |
+| `--n-folds` | *(see hyperparams)*           | Outer CV folds (overrides `HP["n_folds"]`) |
+| `--n-low` | `10000`                       | Low-data subsample size |
+| `--hp-file` | —                             | JSON file with HP overrides |
+| `--quiet` | —                             | Suppress progress output |
 
 ---
 
 ### `train` — Train and save a model
 
-Trains the full pipeline on training data, grid-searches gate (and optionally expert) hyperparameters, evaluates on the held-out test set, and saves the model to disk for later inference.
+Trains the full pipeline on training data, grid-searches gate (and optionally expert) hyperparameters, evaluates on the held-out test set, and saves the model for later inference.
 
 ```bash
 # Gate-only grid search (faster)
@@ -169,46 +166,6 @@ python -m moe_pipeline predict \
 
 ---
 
-## Programmatic API
-
-```python
-import pandas as pd
-from moe_pipeline import MoE, Pipeline, moe_production_pipeline, HP
-from moe_pipeline.data import load_processed_data, split_dataset, prepare_features
-
-# Load and split data
-df = load_processed_data("chembl_kinase_processed.csv")
-train_df, test_df = split_dataset(df, split="scaffold", train_frac=0.85)
-X_train, y_train, smi_train, X_test, y_test, smi_test = prepare_features(train_df, test_df)
-
-# Run gate-only grid search
-pipeline = Pipeline(seed=HP["seed"], n_folds=HP["n_folds"], verbose=True)
-results  = pipeline.run(X_train, y_train, smi_train)
-final_moe  = results["final_moe"]
-best_config = results["best_config"]
-
-# Evaluate on test set
-from moe_pipeline.constants import N_DESC
-X_test_desc   = X_test[:, :N_DESC]
-X_test_scaled = np.concatenate(
-    [final_moe.scaler.transform(X_test_desc), X_test[:, N_DESC:]], axis=1
-)
-metrics = final_moe.evaluate(X_test_desc, X_test_scaled, smi_test, y_test)
-print(f"Test RMSE: {metrics['rmse']:.4f}   R²: {metrics['r2']:.4f}")
-
-# Full production run
-prod_results = moe_production_pipeline(
-    train_df=train_df,
-    test_df=test_df,
-    path="runs/production",
-    HP=HP,
-    n_low=10_000,
-    verbose=True,
-)
-```
-
----
-
 ## Pipeline Architecture
 
 ### Expert Models
@@ -216,28 +173,28 @@ prod_results = moe_production_pipeline(
 | Expert | Type | Input |
 |--------|------|-------|
 | XGBoost | Gradient boosting | Tabular (200 descriptors + 2048 FP bits) |
-| RandomForest | Tree ensemble | Tabular |
-| LightGBM | Gradient boosting | Tabular |
+| RandomForest | Tree ensemble | Tabular (200 descriptors + 2048 FP bits)|
+| LightGBM | Gradient boosting | Tabular (200 descriptors + 2048 FP bits)|
 | ChempropDMPNN | D-MPNN graph network | SMILES → PyG graphs (33-D atom, 6-D bond) |
 | GIN | Graph Isomorphism Network | SMILES → PyG graphs (4 layers, hidden=256) |
 
 ### Gating Network
 
 MLP router that weights expert outputs:
-- **Input (210-D):** `[raw descriptors (200) | expert predictions (5) | expert uncertainties (5)]`
+- **Input (210-D):** `[descriptors (200) | expert predictions (5)]`
 - **Architecture:** `Linear(210) → ReLU(100) → ReLU(80) → Softmax(5)`
 - **Loss:** `L_MSE + oracle_reg × L_oracle − entropy_reg × H(w) + load_balancing × L_lb`
 - **Routing modes:** soft, top-1, top-2, top-3
 
-### Training Flow (OOF Stacking)
+### Training Flow 
 
 1. **Outer K-fold CV** (K=4): 85% pool / 15% val per fold
-2. **Inner 5-fold OOF** on pool: honest expert predictions (no data leakage)
+2. **Inner 5-fold Subsets** each subset: honest expert predictions on unseen data
 3. **Hyperparameter search** over gate configs: `l2_regs × oracle_regs × loss_configs × routing_schemes`
-4. **Optional expert config search** over 4 preset configurations (A/B/C/D corners)
+4. **Optional expert config search** over 4 preset configurations (A/B/C/D)
 5. **Final MoE** retrained on 100% of data with best config
 
-### Default Hyperparameter Grid (`HP`)
+### Hyperparameters Grid Search
 
 #### Expert configs (4 total)
 
@@ -252,19 +209,9 @@ The 4 configs are corners of a 2×2 grid: (tabular-regularized) × (GNN-regulari
 
 #### Gate configs (288 per expert config)
 
-| Dimension | Values | Count |
-|-----------|--------|-------|
-| `l2_regs` (weight decay on gate MLP) | 0.0, 0.001, 0.01, 0.1 | 4 |
-| `oracle_regs` (cross-entropy toward best expert) | 0.0, 0.01, 0.1 | 3 |
-| `loss_configs` (entropy reg + load balancing) | baseline, entropy=1e-4, 1e-3, 1e-2, 0.1, load-balancing | 6 |
-| `routing_schemes` (top-k sparsity) | soft (all experts), top-1, top-2, top-3 | 4 |
-| **Total** | | **288** |
-
-#### Total evaluations
-
-```
-288 gate × 4 expert configs × 4 folds = 4,608 per data regime
-                                       × 2 regimes (10k + full) = 9,216 total
-```
-
-Each evaluation trains a gate network (300 epochs) and scores it on the validation fold. Expert models are trained once per expert config per fold via inner OOF, then reused across all 288 gate configs for that fold — so you're not retraining 9,216 full expert sets, just 4 expert configs × 4 folds × 2 regimes = 32.
+| Dimension | Values | 
+|-----------|--------|
+| `l2_regs` (weight decay on gate MLP) | 0.0, 0.001, 0.01, 0.1 |
+| `oracle_regs` (cross-entropy toward best expert) | 0.0, 0.01, 0.1 |
+| `loss_configs` (entropy reg + load balancing) | baseline, entropy=1e-4, 1e-3, 1e-2, 0.1, load-balancing |
+| `routing_schemes` (top-k sparsity) | soft (all experts), top-1, top-2, top-3 |
